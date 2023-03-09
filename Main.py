@@ -8,6 +8,7 @@ game_on = True
 frame_width = 600
 frame_height = 600
 
+
 class Board():
 	
 	def __init__(self):
@@ -23,14 +24,17 @@ class Board():
 	
 	def tick(self):
 		self.bird.tick()
-		self.pipes.render()
+		self.pipes.tick()
 		pass
 	
 	
 	def render(self):
+		self.img = np.zeros(shape=(frame_width, frame_height, 3))
+		
+		
 		# self.img = self.bird.render(self.img)
 		self.bird.render(self.img)
-		self.pipes.render()
+		self.pipes.render(self.img)
 		
 		
 		cv.imshow('Game', self.img)
@@ -55,6 +59,8 @@ class Bird():
 	
 	def tick(self):
 		
+		
+		# self.check_collision() # TODO: function to check collision with pipes
 		pass
 	
 	def render(self, img):
@@ -64,37 +70,47 @@ class Bird():
 		# img = cv.rectangle(img, (self.x, self.y), (self.x+self.width, self.y+self.height), (0, 255, 0), -1)
 		
 
-
+pipe_speed = 3
+pipe_width = int(0.08 * frame_width)
+gap_height = int(0.2 * frame_height)
 class PipeController():
 	
 	def __init__(self):
 		# Pipes will have an X position that changes over time as the pipe moves leftward 
 		# Pipes will have a static height (Y position?)
-		pipes = []
+		self.xs = [int(frame_width+100), frame_width+300]
+		self.ys = [int(frame_height/2)+40, int(frame_height/2)-40]
 	
 	def tick(self):
+		# for x in self.xs:
+		# 	x -= pipe_speed
+		for i in range(len(self.xs)):
+			self.xs[i] -= pipe_speed
 		
-		pass
 	
-	def render(self):
+	def render(self, img):
 		
-		pass
+		for x, y in zip(self.xs, self.ys):
+			cv.rectangle(img, (x, y), (x + pipe_width, frame_height), (0, 255, 0), -1)
+			cv.rectangle(img, (x, 0), (x + pipe_width, y - gap_height), (0, 255, 0), -1)
+		
+		
 
 
 def key_press(key):
-	
 	global game_on
 	
 	# print(f'Key Pressed: {key}')
 	if key == Key.space or key == Key.up or key == 'w':
-		print('space')
+		print('jump')
 	elif key == Key.esc or key == 'q':
 		print('esc')
 		game_on = False
 		cv.destroyAllWindows()
 
 def key_release(key):
-	print(f'Key Released: {key}')
+	# print(f'Key Released: {key}')
+	pass
 
 
 fps = 60
@@ -115,6 +131,9 @@ if __name__ == '__main__':
 		#### Execution ####
 		board.tick()
 		board.render()
+		
+		count += 1
+		if count % 60 == 0: print('Count:', count)
 		
 		
 		cv_key = cv.waitKey(1)
