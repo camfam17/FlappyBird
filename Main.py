@@ -18,12 +18,29 @@ class Board():
 		self.bird = Bird()
 		self.pipes = PipeController()
 		
+		self.points = 0
+		
 		self.img = np.zeros(shape=(frame_width, frame_height, 3))		
 	
 	def tick(self):
 		self.bird.tick(self.img)
 		self.pipes.tick()
+		
+		self.check_points()
 	
+	def check_points(self):
+		
+		bird_x1 = self.bird.x
+		bird_x2 = bird_x1 + self.bird.width
+		
+		xs = self.pipes.xs
+		
+		for i, x in enumerate(xs):
+			if x in range(bird_x1, bird_x2) and self.pipes.pointed[i] == False:
+				print('POINT!!!!!')
+				self.points += 1
+				self.pipes.pointed[i] = True
+		
 	
 	def render(self):
 		self.img = np.zeros(shape=(frame_width, frame_height, 3))
@@ -36,22 +53,24 @@ class Board():
 		if game_state == 'pause':
 			(text_width, text_height), _ = cv.getTextSize('PAUSED', fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1.1, thickness=5)
 			cv.putText(self.img, 'PAUSED', org=(int(frame_width/2 - text_width/2), int(frame_height/2 - text_height/2)), 
-	      				fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1.1, color=(255, 255, 255), thickness=5)
+	      				fontFace=cv.FONT_HERSHEY_COMPLEX, fontScale=1.1, color=(255, 0, 255), thickness=5)
 		elif game_state == 'dead':
 			(text_width1, text_height1), _ = cv.getTextSize('YOU DIED', fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.1, thickness=5)
 			cv.putText(self.img, 'YOU DIED', org=(int(frame_width/2 - text_width1/2), int(frame_height/2 - text_height1/2)), 
-	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.1, color=(255, 255, 255), thickness=5)
+	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.1, color=(255, 0, 255), thickness=5)
 			
 			(text_width2, text_height2), _ = cv.getTextSize('Press any key to continue', fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5, thickness=2)
 			cv.putText(self.img, 'Press any key to continue', org=(int(frame_width/2 - text_width2/2), int(frame_height/2 + text_height2/2)), 
-	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255, 255, 255), thickness=2)
+	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=0.5, color=(255, 0, 255), thickness=2)
 			
+		
+		(text_width, text_height), _ = cv.getTextSize('Points: ' + str(self.points), fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=0.8, thickness=2)
+		cv.putText(self.img, 'Points: ' + str(self.points), org=(10, text_height + 10), fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=0.8, color=(0, 0, 255), thickness=2)
 		
 		# cv.line(self.img, (int(frame_width/2), 0), (int(frame_width/2), frame_height), color=(0, 0, 255), thickness=1)
 		# cv.line(self.img, (0, int(frame_height/2)), (frame_width, int(frame_height/2)), color=(0, 0, 255), thickness=1)
 		
 		cv.imshow('Game', self.img)
-		
 	
 	def flap(self):
 		self.bird.flap()
@@ -81,7 +100,6 @@ class Bird():
 		self.sprite = np.zeros((self.width, self.height, 3), np.uint8)
 		self.sprite[:, :, :] = (0, 255, 0)
 		
-		pass
 	
 	def tick(self, img):
 		global game_state
@@ -101,9 +119,6 @@ class Bird():
 		if self.y > frame_height - self.height:
 			self.y = frame_height - self.height + 2
 			game_state = 'dead'
-		
-		
-		# self.check_collision() # TODO: function to check collision with pipes
 	
 	def check_collision(self, img):
 		global game_state
@@ -115,46 +130,29 @@ class Bird():
 		left_line = img[self.y-1 : self.y + self.height + 1, self.x-1, :] 
 		right_line = img[self.y-1 : self.y + self.height + 1, self.x + self.width, :]
 		
-		# if pipe_colour in [*top_line, *bottom_line, *left_line, *right_line]:
-		# if (list(pipe_colour) - [*top_line, *bottom_line, *left_line, *right_line]).all():
-		# colours = set([*top_line, *bottom_line, *left_line, *right_line])
-		# if pipe_colour in colours:
-		# 	print('COLLIDE!!!!!')
-		
-		# colours = map( lambda x: cv.cvtColor(x, cv.COLOR_BGR2HSV), [*top_line, *bottom_line, *left_line, *right_line])
 		colours = [*top_line, *bottom_line, *left_line, *right_line]
 		colours = set(map(self.rgb_to_string, colours))
-		
 		pipe_string = self.rgb_to_string(pipe_colour)
-		
-		print(colours, 'cwqccqw', pipe_string)
 		if pipe_string in colours:
 			print('COLLIDE!!!!!')
 			game_state = 'dead'
 		
-		
-		pass
 	
 	def rgb_to_string(self, *args):
 		
 		args = args[0]
 		
-		string = ''
-		string += str(int(args[0]))
-		string += str(int(args[1]))
-		string += str(int(args[2]))
+		# string = ''
+		# string += str(int(args[0]))
+		# string += str(int(args[1]))
+		# string += str(int(args[2]))
+		
+		string = str(list(map(int, args)))
 		
 		return string
-		
-		pass
-	
-	def format_colour_string(self, colour):
-		return str(list(colour)).replace(',', '.').replace('[', '').replace(']', '').replace(' ', '')
 	
 	def render(self, img):
 		
-		# img[self.x : self.x + self.width, self.y : self.y + self.height] = self.sprite
-		# img[self.x : self.x + self.width, self.y : self.y + self.height, :] = (0, 255, 0)
 		img[self.y : self.y + self.height, self.x : self.x + self.width, :] = (0, 255, 0)
 		# img = cv.rectangle(img, (self.x, self.y), (self.x+self.width, self.y+self.height), (0, 255, 0), -1)
 		
@@ -188,7 +186,9 @@ class PipeController():
 		for i in range(n_pipes): # top height is good, find better bottom height (lower it slightly)
 			self.ys.append(int(frame_height/2) + random.randint(-0.2*frame_height, 0.2*frame_height + gap_height))
 		
-		# the x and y coordinates of eacch pipe refers to the top left corner of the bottom pipe
+		self.pointed = [False] * n_pipes
+		
+		# the x and y coordinates of eacch pipe refers to the top right corner of the bottom pipe
 	
 	def tick(self):
 		# for x in self.xs:
@@ -200,10 +200,9 @@ class PipeController():
 	def render(self, img):
 		
 		for x, y in zip(self.xs, self.ys):
-			cv.rectangle(img, (x, y), (x + pipe_width, frame_height), pipe_colour, -1)
-			cv.rectangle(img, (x, 0), (x + pipe_width, y - gap_height), pipe_colour, -1)
-			cv.circle(img, (x, y), 3, (0, 0, 255), -1)
-		
+			cv.rectangle(img, (x, y), (x - pipe_width, frame_height), pipe_colour, -1)
+			cv.rectangle(img, (x, 0), (x - pipe_width, y - gap_height), pipe_colour, -1)
+			# cv.circle(img, (x, y), 3, (0, 0, 255), -1)
 		
 
 
