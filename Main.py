@@ -7,7 +7,7 @@ import random
 
 game_on = True
 game_state = 'play'
-frame_width = frame_height = 200
+frame_width = frame_height = 1000
 
 class Board():
 	
@@ -18,13 +18,27 @@ class Board():
 		
 		self.points = 0
 		
-		self.img = np.zeros(shape=(frame_width, frame_height, 3))		
+		self.img = np.zeros(shape=(frame_width, frame_height, 3))
+		self.start_time = time.time()
+		self.fps = 0
 	
 	def tick(self):
+		
+		# Measure actual frames per second
+		prev_time = self.start_time
+		self.start_time = time.time()
+		delta_time = self.start_time - prev_time
+		if delta_time > 0:
+			if not abs(self.fps - int(1 / delta_time)) < 10:
+				self.fps = int(1 / delta_time)
+		
 		self.bird.tick(self.img)
 		self.pipes.tick()
 		
 		self.check_points()
+		
+		
+		
 	
 	def render(self):
 		self.img = np.zeros(shape=(frame_width, frame_height, 3))
@@ -48,9 +62,13 @@ class Board():
 	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=8.333e-4*frame_width, color=(255, 0, 255), thickness=int(3.333e-3*frame_width))
 			
 		
-		(text_width, text_height), _ = cv.getTextSize('Points: ' + str(self.points), fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.333e-3*frame_width, thickness=int(3.333e-3*frame_width))
-		cv.putText(self.img, 'Points: ' + str(self.points), org=(10, text_height + 10), fontFace=cv.FONT_HERSHEY_SIMPLEX, 
+		(_, points_height), _ = cv.getTextSize('Points: ' + str(self.points), fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.333e-3*frame_width, thickness=int(3.333e-3*frame_width))
+		cv.putText(self.img, 'Points: ' + str(self.points), org=(10, points_height + 10), fontFace=cv.FONT_HERSHEY_SIMPLEX, 
 	     			fontScale=1.333e-3*frame_width, color=(0, 0, 255), thickness=int(3.333e-3*frame_width))
+		
+		(_, fps_height), _ = cv.getTextSize(str(self.fps) + 'fps', fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=0.8, thickness=2)
+		cv.putText(self.img, str(self.fps) + 'fps', org=(10, fps_height + points_height + int(0.05*frame_width)), 
+	     		    fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.333e-3*frame_width, color=(0, 0, 255), thickness=int(3.333e-3*frame_width))
 		
 		# cv.line(self.img, (int(frame_width/2), 0), (int(frame_width/2), frame_height), color=(0, 0, 255), thickness=1)
 		# cv.line(self.img, (0, int(frame_height/2)), (frame_width, int(frame_height/2)), color=(0, 0, 255), thickness=1)
@@ -103,6 +121,11 @@ class Bird():
 	def tick(self, img):
 		global game_state
 		
+		if self.y > frame_height - self.height -1 : # kill the bird if it falls to the bottom of the screen
+			self.y = frame_height - self.height + 2
+			game_state = 'dead'
+			return
+		
 		collision = self.check_collision(img)
 		if collision:
 			return
@@ -118,9 +141,9 @@ class Bird():
 		if self.y < -self.height: # block the bird from flying up indefinitely
 			self.y = -self.height
 		
-		if self.y > frame_height - self.height:
-			self.y = frame_height - self.height + 2
-			game_state = 'dead'
+		# if self.y > frame_height - self.height: # kill the bird if it falls to the bottom of the screen
+		# 	self.y = frame_height - self.height + 2
+		# 	game_state = 'dead'
 	
 	
 	def render(self, img):
@@ -269,7 +292,7 @@ if __name__ == '__main__':
 		
 		
 		count += 1
-		if count % 60 == 0: print('Count:', count)
+		if count % fps == 0: print('Count:', count, time.time())
 		
 		
 		cv_key = cv.waitKey(1)
