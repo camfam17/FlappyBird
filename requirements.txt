@@ -1,0 +1,4 @@
+numpy==1.24.2
+opencv-python==4.7.0.72
+pynput==1.7.6
+six==1.16.0
