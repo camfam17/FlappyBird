@@ -81,6 +81,7 @@ class Board():
 		# cv.line(self.img, (0, int(frame_height/2)), (frame_width, int(frame_height/2)), color=(0, 0, 255), thickness=1)
 		
 		# self.img = cv.resize(src=self.img, dsize=(300, 300))
+		# self.next_pipe_coords()
 		cv.imshow('Flappy Bird', self.img)
 	
 	
@@ -114,13 +115,6 @@ class Board():
 		game_state = 'play'
 	
 	def pipe_coords(self):
-		# get the coordinates of the:
-		# closest pipe?
-		# closest 2 pipes?
-		# the pipe in front?
-		
-		
-		# NB probably also need to give the NN the coords of the bird
 		
 		pipe_coords = []
 		for i in range(3):
@@ -128,6 +122,14 @@ class Board():
 		# print(pipe_coords)
 		
 		return pipe_coords
+	
+	def next_pipe_coords(self):
+		
+		for x, y in zip(self.pipes.xs, self.pipes.ys):
+			if x > self.birds[0].x:
+				
+				# cv.circle(self.img, (int(x), y), 4, (0, 0, 255), -1)
+				return [x, y]
 	
 	def bird_coords(self):
 		return (self.birds[0].x, self.birds[0].y),
@@ -171,10 +173,6 @@ class Bird():
 		self.y = self.y - self.y_vector
 		if self.y < -self.height: # block the bird from flying up indefinitely
 			self.y = -self.height
-		
-		# if self.y > frame_height - self.height: # kill the bird if it falls to the bottom of the screen
-		# 	self.y = frame_height - self.height + 2
-		# 	game_state = 'dead'
 	
 	
 	def render(self, img):
@@ -200,7 +198,7 @@ class Bird():
 		colours = set(map(self.rgb_to_string, colours))
 		pipe_string = self.rgb_to_string(pipe_colour)
 		if pipe_string in colours:
-			print('COLLIDE!!!!!')
+			# print('COLLIDE!!!!!')
 			game_state = 'dead'
 			return True
 		
@@ -336,13 +334,14 @@ class Controller():
 			board.render()
 			
 			if self.agent is not None:
-				jump = self.agent.predict(board.bird_coords(), board.pipe_coords(), board.points, game_state=='dead')
+				# jump = self.agent.predict(board.bird_coords(), board.pipe_coords(), board.points, game_state=='dead')
+				jump = self.agent.predict(board.bird_coords(), board.next_pipe_coords(), board.points, game_state=='dead')
 				if jump:
 					key_press(Key.space)
 			
 			
 			count += 1
-			if count % fps == 0: print('Count:', count, time.time())
+			# if count % fps == 0: print('Count:', count, time.time())
 			
 			
 			cv_key = cv.waitKey(1)
