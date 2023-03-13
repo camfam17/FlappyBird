@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 from pynput import keyboard
+from pynput.keyboard import Key
 import time
 import random
 
@@ -8,8 +9,6 @@ game_on = True
 game_state = 'play'
 frame_width = frame_height = 600
 
- # TODO enable multiple birds
- 
 class Board():
 	
 	def __init__(self, nbirds=1):
@@ -65,8 +64,8 @@ class Board():
 			cv.putText(self.img, 'YOU DIED', org=(int(frame_width/2 - text_width1/2), int(frame_height/2 - text_height1/2)), 
 	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=1.8333e-3*frame_width, color=(255, 0, 255), thickness=int(8.333e-3*frame_width))
 			
-			(text_width2, text_height2), _ = cv.getTextSize('Press any key to continue', fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=8.333e-4*frame_width, thickness=int(3.333e-3*frame_width))
-			cv.putText(self.img, 'Press any key to continue', org=(int(frame_width/2 - text_width2/2), int(frame_height/2 + text_height2/2)), 
+			(text_width2, text_height2), _ = cv.getTextSize('Press r to continue', fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=8.333e-4*frame_width, thickness=int(3.333e-3*frame_width))
+			cv.putText(self.img, 'Press r to continue', org=(int(frame_width/2 - text_width2/2), int(frame_height/2 + text_height2/2)), 
 	      				fontFace=cv.FONT_HERSHEY_SIMPLEX, fontScale=8.333e-4*frame_width, color=(255, 0, 255), thickness=int(3.333e-3*frame_width))
 			
 		
@@ -113,13 +112,32 @@ class Board():
 		print('restart')
 		self.__init__(self.nbirds)
 		game_state = 'play'
+	
+	def pipe_coords(self):
+		# get the coordinates of the:
+		# closest pipe?
+		# closest 2 pipes?
+		# the pipe in front?
+		
+		
+		# NB probably also need to give the NN the coords of the bird
+		
+		pipe_coords = []
+		for i in range(3):
+			pipe_coords.append(list((self.pipes.xs[i], self.pipes.ys[i])))
+		# print(pipe_coords)
+		
+		return pipe_coords
+	
+	def bird_coords(self):
+		return (self.birds[0].x, self.birds[0].y),
 
 
 class Bird():
 	
 	def __init__(self):
 		
-		self.x_vector = -10
+		self.x_vector = -10 + random.randint(-2, 2)
 		
 		self.width = int(0.05 * frame_width)
 		self.height = int(0.05 * frame_height)
@@ -266,10 +284,11 @@ def key_press(key):
 	except AttributeError:
 		key_code = key.name
 	
-	print(key_code)
+	# print(key_code)
 	
 	if game_state == 'dead': # press any key to restart
-		board.restart()
+		if key_code == 'r':
+			board.restart()
 	else:
 		if key_code == 'space' or key_code == 'up' or key_code == 'w': # to jump/flap
 			board.flap(-1)
@@ -285,36 +304,92 @@ def key_release(key):
 
 fps = 60
 frame = 1/fps
+
+
+class Controller():
+	
+	def __init__(self, agent):
+		
+		self.agent = agent
+		self.start_loop()
+	
+	
+	def start_loop(self):
+		global board
+		board = Board(nbirds=1)
+		
+		listener = keyboard.Listener(on_press=key_press, on_release=key_release)
+		listener.start()
+		
+		count = 0
+		while game_on:
+			
+			start_time = time.time()
+			
+			if game_state  == 'dead' and self.agent is not None:
+				# process.terminate()
+				break
+			
+			#### Execution ####
+			if game_state == 'play':
+				board.tick()
+			board.render()
+			
+			if self.agent is not None:
+				jump = self.agent.predict(board.bird_coords(), board.pipe_coords(), board.points, game_state=='dead')
+				if jump:
+					key_press(Key.space)
+			
+			
+			count += 1
+			if count % fps == 0: print('Count:', count, time.time())
+			
+			
+			cv_key = cv.waitKey(1)
+			if cv_key == 27 or cv_key == ord('q') or cv.getWindowProperty('Flappy Bird', cv.WND_PROP_VISIBLE) < 1: # Press esc or q to quit
+				break
+			
+			delta_time = time.time() - start_time
+			sleep_time = frame - delta_time
+			if sleep_time > 0:
+				time.sleep(sleep_time)
+		
+		print('Game Exit')
+		cv.destroyAllWindows()
+	
 if __name__ == '__main__':
 	
 	board = Board(nbirds=1)
+	c = Controller(None)
 	
-	listener = keyboard.Listener(on_press=key_press, on_release=key_release)
-	listener.start()
+	# board = Board(nbirds=1)
 	
-	count = 0
-	while game_on:
-		
-		start_time = time.time()
-		
-		
-		#### Execution ####
-		if game_state == 'play':
-			board.tick()
-		board.render()
-		
-		
-		count += 1
-		if count % fps == 0: print('Count:', count, time.time())
-		
-		
-		cv_key = cv.waitKey(1)
-		if cv_key == 27 or cv_key == ord('q') or cv.getWindowProperty('Flappy Bird', cv.WND_PROP_VISIBLE) < 1: # Press esc or q to quit
-			break
-		
-		delta_time = time.time() - start_time
-		sleep_time = frame - delta_time
-		if sleep_time > 0:
-			time.sleep(sleep_time)
+	# listener = keyboard.Listener(on_press=key_press, on_release=key_release)
+	# listener.start()
 	
-	cv.destroyAllWindows()
+	# count = 0
+	# while game_on:
+		
+	# 	start_time = time.time()
+		
+		
+	# 	#### Execution ####
+	# 	if game_state == 'play':
+	# 		board.tick()
+	# 	board.render()
+		
+		
+	# 	count += 1
+	# 	if count % fps == 0: print('Count:', count, time.time())
+		
+		
+	# 	cv_key = cv.waitKey(1)
+	# 	if cv_key == 27 or cv_key == ord('q') or cv.getWindowProperty('Flappy Bird', cv.WND_PROP_VISIBLE) < 1: # Press esc or q to quit
+	# 		break
+		
+	# 	delta_time = time.time() - start_time
+	# 	sleep_time = frame - delta_time
+	# 	if sleep_time > 0:
+	# 		time.sleep(sleep_time)
+	
+	# cv.destroyAllWindows()
