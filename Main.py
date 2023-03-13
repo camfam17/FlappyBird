@@ -12,9 +12,13 @@ frame_width = frame_height = 600
  
 class Board():
 	
-	def __init__(self):
+	def __init__(self, nbirds=1):
 		
-		self.bird = Bird()
+		# self.bird = Bird()
+		self.nbirds = nbirds
+		self.birds= []
+		for i in range(nbirds):
+			self.birds.append(Bird())
 		self.pipes = PipeController()
 		
 		self.points = 0
@@ -33,19 +37,22 @@ class Board():
 			if not abs(self.fps - int(1 / delta_time)) < 10:
 				self.fps = int(1 / delta_time)
 		
-		self.bird.tick(self.img)
+		# self.bird.tick(self.img)
+		for bird in self.birds:
+			bird.tick(self.img)
 		self.pipes.tick()
 		
-		self.check_points()
-		
-		
+		for bird in self.birds:
+			self.check_points(bird)
 		
 	
 	def render(self):
 		self.img = np.zeros(shape=(frame_width, frame_height, 3))
 		
 		
-		self.bird.render(self.img)
+		# self.bird.render(self.img)
+		for bird in self.birds:
+			bird.render(self.img)
 		self.pipes.render(self.img)
 		
 		# TODO make font scale & thickness with frame_width & frame_height
@@ -78,10 +85,10 @@ class Board():
 		cv.imshow('Flappy Bird', self.img)
 	
 	
-	def check_points(self):
+	def check_points(self, bird):
 		
-		bird_x1 = self.bird.x
-		bird_x2 = bird_x1 + self.bird.width
+		bird_x1 = bird.x
+		bird_x2 = bird_x1 + bird.width
 		
 		xs = self.pipes.xs
 		
@@ -92,14 +99,19 @@ class Board():
 				self.pipes.pointed[i] = True
 	
 	
-	def flap(self):
-		self.bird.flap()
+	def flap(self, birdID):
+		# self.bird.flap()
+		if birdID < 0:
+			for bird in self.birds:
+				bird.flap()
+		else:
+			self.birds[birdID].flap()
 	
 	def restart(self):
 		global game_state
 		
 		print('restart')
-		self.__init__()
+		self.__init__(self.nbirds)
 		game_state = 'play'
 
 
@@ -260,7 +272,7 @@ def key_press(key):
 		board.restart()
 	else:
 		if key_code == 'space' or key_code == 'up' or key_code == 'w': # to jump/flap
-			board.flap()
+			board.flap(-1)
 		elif key_code == 'esc' or key_code == 'q': # to quit the game
 			game_on = False
 		elif key_code == 'p': # to pause and unpause
@@ -275,7 +287,7 @@ fps = 60
 frame = 1/fps
 if __name__ == '__main__':
 	
-	board = Board()
+	board = Board(nbirds=1)
 	
 	listener = keyboard.Listener(on_press=key_press, on_release=key_release)
 	listener.start()
