@@ -1,13 +1,12 @@
 import cv2 as cv
 import numpy as np
 from pynput import keyboard
-from pynput.keyboard import Key
 import time
 import random
 
 game_on = True
 game_state = 'play'
-frame_width = frame_height = 1000
+frame_width = frame_height = 600
 
 class Board():
 	
