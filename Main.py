@@ -8,6 +8,8 @@ game_on = True
 game_state = 'play'
 frame_width = frame_height = 600
 
+ # TODO enable multiple birds
+ 
 class Board():
 	
 	def __init__(self):
