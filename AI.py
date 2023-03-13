@@ -107,6 +107,8 @@ if __name__ == '__main__':
     
     
     # Select best individuals
+    # Choose the agents with the highest fitness value. 
+    # Randomness will likely be necessary here
     
     print('end')
     
