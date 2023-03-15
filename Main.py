@@ -173,6 +173,8 @@ class Bird():
 		self.y = self.y - self.y_vector
 		if self.y < -self.height: # block the bird from flying up indefinitely
 			self.y = -self.height
+			game_state = 'dead'
+			return
 	
 	
 	def render(self, img):

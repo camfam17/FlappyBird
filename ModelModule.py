@@ -15,6 +15,7 @@ class Model(nn.Module):
 		self.name = name
 		self.device = device
 		
+		self.mutations = 0
 		self.playing = False
 		self.frames = 0
 		self.points = 0
@@ -75,8 +76,10 @@ class Model(nn.Module):
 	
 	
 	def mutate(self, mutation_rate=0.1):
+		self.mutations += 1
 		for param in self.parameters():
-			param.data += mutation_rate * torch.randn_like(param)
+			if random.random() > 0.5:
+				param.data += mutation_rate * torch.randn_like(param)
 	
 	
 	def play_game(self):
@@ -90,6 +93,13 @@ class Model(nn.Module):
 		self.frames = 0
 		self.points = 0
 		self.fitness = 0
+	
+	def to_string(self, _print=True):
+		s = f'{self.name}, Fitness: {self.fitness}, Mutations: {self.mutations}'
+		if _print:
+			print(s)
+		
+		return s
 
 
 class FCNN4(Model):
@@ -151,11 +161,14 @@ class NoHiddenLayers(Model):
 	
 	#Overriden
 	def calculate_fitness(self, *in_data):
-		self.fitness = self.frames/800 + self.points
+		if self.points == 0:
+			self.fitness = 0
+		else:
+			self.fitness = self.frames/800 + self.points
 
 
 def save(model, name):
-    MODEL_PATH = Path('models')
+    MODEL_PATH = Path('models1')
     MODEL_PATH.mkdir(parents=True, exist_ok='True')
     
     # 2. Create model save path
@@ -197,14 +210,29 @@ def proportionate_select(agents):
 	return new_agents
 
 
-def roulette_wheel_select(agents, n_pointers=2):
+def roulette_wheel_select(agents, n_pointers=None, reduction=0.5):
+	print('Roulette')
 	
+	if n_pointers is None:
+		n_pointers = 2
 	
+	n_agents = len(agents)
+	distance_between_pointers = n_agents/n_pointers
 	
-	pass
+	selected_agents = []
+	while len(selected_agents) < reduction*n_agents:
+		R = random.randint(0, int(distance_between_pointers))
+		R_sample = []
+		for i in range(1, n_pointers):
+			print(f'i: {i}, R: {R}, i*R: {i*R}')
+			R_sample.append(agents[i*R])
+		R_sample.sort(key= lambda x: x.fitness, reverse=True)
+		selected_agents.append(copy.deepcopy(R_sample[0]))
+	
+	return copy.deepcopy(selected_agents)
 
 
-population_size = 10
+population_size = 100
 generations = 100
 mutation_rate = 0.1
 if __name__ == '__main__':
@@ -221,11 +249,11 @@ if __name__ == '__main__':
 		print(f'Generation: {gen}')
 		
 		### Make them play ### NOTE parallelize this section
-		for agent in agents:
+		for i, agent in enumerate(agents):
 			agent.play_game()
 			while True:
 				if not agent.playing:
-					print(agent.name + ' fitness =', agent.fitness)
+					print('i', str(i), agent.to_string(_print=False))
 					importlib.reload(Main)
 					break
 		
@@ -233,13 +261,22 @@ if __name__ == '__main__':
 		# sort from best fitness (max) to worst
 		# agents.sort(key=lambda x: x.fitness, reverse=True)
 		
-		agents = proportionate_select(agents)
+		# agents = proportionate_select(agents)
+		### Apply Selection ###
+		selected_agents = roulette_wheel_select(agents, 5)
+		
+		# Mutate & restore population
+		mutated_selected_agents = copy.deepcopy(selected_agents)
+		for i in range(len(mutated_selected_agents)):
+			mutated_selected_agents[i].mutate(mutation_rate)
+		
+		agents = selected_agents + mutated_selected_agents
 		
 		### Save best models? ###
 		for i in range(5):
 			save(agents[i], f'Gen{gen} {agents[i].name} Top{i+1} Fit {int(agents[i].fitness)}.pth')
 		
-		### Apply selection ###
+		### Apply selection ### (truncation fitness)
 		# agents = agents[ : int(len(agents)/2)] # Kill worst 50% of agents
 		# agents = agents + mutate(copy.deepcopy(agents)) # Keep the best 50%
 		
