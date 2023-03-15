@@ -132,7 +132,7 @@ class Board():
 				return [x, y]
 	
 	def bird_coords(self):
-		return (self.birds[0].x, self.birds[0].y),
+		return [self.birds[0].x, self.birds[0].y]
 
 
 class Bird():
@@ -317,7 +317,8 @@ class Controller():
 		board = Board(nbirds=1)
 		
 		listener = keyboard.Listener(on_press=key_press, on_release=key_release)
-		listener.start()
+		if self.agent is None:
+			listener.start()
 		
 		count = 0
 		while game_on:
@@ -335,7 +336,7 @@ class Controller():
 			
 			if self.agent is not None:
 				# jump = self.agent.predict(board.bird_coords(), board.pipe_coords(), board.points, game_state=='dead')
-				jump = self.agent.predict(board.bird_coords(), board.next_pipe_coords(), board.points, game_state=='dead')
+				jump = self.agent.predict(board.points, game_state=='dead', board.bird_coords(), board.next_pipe_coords())
 				if jump:
 					key_press(Key.space)
 			
@@ -345,8 +346,8 @@ class Controller():
 			
 			
 			cv_key = cv.waitKey(1)
-			if cv_key == 27 or cv_key == ord('q') or cv.getWindowProperty('Flappy Bird', cv.WND_PROP_VISIBLE) < 1: # Press esc or q to quit
-				break
+			# if cv_key == 27 or cv_key == ord('q') or cv.getWindowProperty('Flappy Bird', cv.WND_PROP_VISIBLE) < 1: # Press esc or q to quit
+			# 	break
 			
 			delta_time = time.time() - start_time
 			sleep_time = frame - delta_time
