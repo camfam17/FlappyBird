@@ -54,10 +54,11 @@ class Model(nn.Module):
 		# Kill the player after 100 points. If they've played a 100 point game then it's likely perfect
 		if points > 100:
 			dead = True
+			save(self, 'SelfDestruct100points.pth')
 		
 		if dead:
 			self.playing = False
-			self.calculate_fitness(self.in_data)
+			self.calculate_fitness(self, self.in_data)
 			return False
 		
 		X = self.data_to_tensor(*data)
@@ -102,6 +103,26 @@ class Model(nn.Module):
 		return s
 
 
+class ArgsModel(Model):
+	
+	def __init__(self, net, fitness_func, **kwargs):
+		super().__init__()
+		self.calculate_fitness = fitness_func
+		
+		self.network = net
+		pass
+	
+	#Overridden
+	def data_to_tensor(self, *data):
+		# Convert data into torch.Tensor. Dependent on each model implementation
+		
+		t = []
+		for d in data:
+			t += d
+		
+		return torch.tensor(t, dtype=torch.float, device=self.device)
+		# eg: return torch.tensor(data)
+
 class FCNN4(Model):
 	
 	def __init__(self, **kwargs):
@@ -145,7 +166,7 @@ class NoHiddenLayers(Model):
 	#Overriden
 	def create_network(self) -> nn.Module:
 		
-		net = nn.Sequential(OrderedDict([ ('input', nn.Linear(in_features=4, out_features=1)), ('sigmoid', nn.Sigmoid())
+		net = nn.Sequential(OrderedDict([ ('input', nn.Linear(in_features=4, out_features=10)), ('hidden1', nn.Linear(in_features=10, out_features=1)), ('sigmoid', nn.Sigmoid())
 				   			]))
 		
 		return net
@@ -161,11 +182,22 @@ class NoHiddenLayers(Model):
 	
 	#Overriden
 	def calculate_fitness(self, *in_data):
-		if self.points == 0:
-			self.fitness = 0
-		else:
-			self.fitness = self.frames/800 + self.points
+		# if self.points == 0:
+		# 	self.fitness = 0
+		# else:
+		# 	self.fitness = self.frames/800 + self.points
+		self.fitness = self.frames/800 + self.points
 
+
+
+def framesover800(self, *in_data):
+		self.fitness = self.frames/800 + self.points
+
+def no_points_for_frames(self, *in_data):
+	if self.points == 0:
+		return 0
+	else:
+		return self.points
 
 def save(model, name):
     MODEL_PATH = Path('models1')
@@ -209,7 +241,6 @@ def proportionate_select(agents):
 	
 	return new_agents
 
-
 def roulette_wheel_select(agents, n_pointers=None, reduction=0.5):
 	print('Roulette')
 	
@@ -232,6 +263,10 @@ def roulette_wheel_select(agents, n_pointers=None, reduction=0.5):
 	return copy.deepcopy(selected_agents)
 
 
+n1 = nn.Sequential(OrderedDict([ ('input', nn.Linear(in_features=4, out_features=10)), ('hidden1', nn.Linear(in_features=10, out_features=1)), ('sigmoid', nn.Sigmoid())
+				   			]))
+
+
 population_size = 100
 generations = 100
 mutation_rate = 0.1
@@ -242,7 +277,9 @@ if __name__ == '__main__':
 	### Create population ###
 	agents = []
 	for i in range(population_size):
-		agents.append(FCNN4(name='Agent ' + str(i), device=device).to(device))
+		# agents.append(FCNN4(name='Agent ' + str(i), device=device).to(device))
+		# agents.append(FCNN4(name='Agent ' + str(i), device=device).to(device))
+		agents.append(ArgsModel(net=n1, fitness_func=no_points_for_frames, name='Agent ' + str(i), device=device))
 	
 	
 	for gen in range(generations):
@@ -279,9 +316,7 @@ if __name__ == '__main__':
 		### Apply selection ### (truncation fitness)
 		# agents = agents[ : int(len(agents)/2)] # Kill worst 50% of agents
 		# agents = agents + mutate(copy.deepcopy(agents)) # Keep the best 50%
-		
-		### Mutation ###
-		
-		for agent in agents:
-			agent.reset()
-			print(agent.fitness)
+
+
+# Selection functions
+# Fitness functions

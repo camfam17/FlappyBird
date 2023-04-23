@@ -356,7 +356,7 @@ class Controller():
 			if sleep_time > 0:
 				time.sleep(sleep_time)
 		
-		print('Game Exit')
+		# print('Game Exit')
 		cv.destroyAllWindows()
 	
 if __name__ == '__main__':
