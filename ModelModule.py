@@ -106,7 +106,7 @@ class Model(nn.Module):
 class ArgsModel(Model):
 	
 	def __init__(self, net, fitness_func, **kwargs):
-		super().__init__()
+		super().__init__(**kwargs)
 		self.calculate_fitness = fitness_func
 		
 		self.network = net
@@ -263,7 +263,9 @@ def roulette_wheel_select(agents, n_pointers=None, reduction=0.5):
 	return copy.deepcopy(selected_agents)
 
 
-n1 = nn.Sequential(OrderedDict([ ('input', nn.Linear(in_features=4, out_features=10)), ('hidden1', nn.Linear(in_features=10, out_features=1)), ('sigmoid', nn.Sigmoid())
+n1 = nn.Sequential(OrderedDict([ ('input', nn.Linear(in_features=4, out_features=10)), ('sigmoid1', nn.Sigmoid()),
+				 				 ('hidden1', nn.Linear(in_features=10, out_features=10)), ('sigmoid2', nn.Sigmoid()),
+								 ('hidden2', nn.Linear(in_features=10, out_features=1)), ('sigmoid3', nn.Sigmoid())
 				   			]))
 
 
@@ -279,7 +281,8 @@ if __name__ == '__main__':
 	for i in range(population_size):
 		# agents.append(FCNN4(name='Agent ' + str(i), device=device).to(device))
 		# agents.append(FCNN4(name='Agent ' + str(i), device=device).to(device))
-		agents.append(ArgsModel(net=n1, fitness_func=no_points_for_frames, name='Agent ' + str(i), device=device))
+		agents.append(ArgsModel(net=copy.deepcopy(n1), fitness_func=no_points_for_frames, name='Agent ' + str(i), device=device))
+		agents[-1].mutate(mutation_rate=0.5)
 	
 	
 	for gen in range(generations):
