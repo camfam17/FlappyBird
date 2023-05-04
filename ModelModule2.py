@@ -6,6 +6,9 @@ import numpy as np
 import copy
 import importlib
 import random
+from pathlib import Path
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Model class extends nn.Module
 # Takes init arguments like fitness_function and network
@@ -102,7 +105,11 @@ class Model(nn.Module):
 			param.data += mutmat
 
 
-############### Selection functions  ###############
+############### Mutation functions ###############
+
+
+
+############### Selection functions ###############
 def roulette_wheel_select(agents, n_pointers=None, reduction=0.5):
 	print('Roulette')
 	
@@ -135,6 +142,18 @@ def no_points_for_frames(self, *in_data):
 	else:
 		return self.points
 
+
+def save(model, name):
+    MODEL_PATH = Path('models1')
+    MODEL_PATH.mkdir(parents=True, exist_ok='True')
+    
+    # 2. Create model save path
+    MODEL_NAME = name + '.pth'
+    MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
+    
+    # 3. Save them model state_dict()
+    torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH)
+
 # Models
 # This is where the selection of models will go. 
 # They will be ordered_dict dictionaries:
@@ -164,13 +183,68 @@ n2 = OrderedDict([('input', nn.Linear(in_features=4, out_features=128)), #('relu
 
 # Create an experiment class that takes arguments like model, selection_functions, fitness_functions, generations, population size etc that will run an experiment and save the results.
 
+class Experiment():
+
+	def __init__(self, population_size, generations, model, fitness_function, selection_function):
+		
+		self.population_size = population_size
+		self.generations = generations
+		self.model = model
+		self.fitness_function = fitness_function
+		self.selection_function = selection_function
+		
+		pass
+	
+	def start(self):
+		
+		print('Starting Experiment')
+		
+		### Create population ###
+		agents = []
+		for i in range(self.population_size):
+			agents.append(Model(network=copy.deepcopy(self.model), fitness_function=self.fitness_function, name='Agent ' + str(i), device=device))
+			agents[-1].mutate(mutate_all=True)
+			pass
+		
+		
+		for gen in range(generations):
+			
+			print('Generation', gen)
+			
+			for i, agent in enumerate(agents):
+				print(list(agent.parameters()))
+				agent.play_game()
+				while True:
+					if not agent.playing:
+						print('i', str(i), agent.to_string(_print=False))
+						importlib.reload(Main)
+						break
+			
+			# for agent in agents:
+			# 	agent.mutate(mutation_magnitude=1)
+			
+			### Apply Selection ###
+			selected_agents = self.selection_function(agents, 5)
+			
+			# Mutate & restore population
+			mutated_selected_agents = copy.deepcopy(selected_agents)
+			for i in range(len(mutated_selected_agents)):
+				mutated_selected_agents[i].mutate()
+			
+			agents = selected_agents + mutated_selected_agents
+
+
 population_size = 100
 generations = 100
 if __name__ == '__main__':
     
 	print('hi')
 	
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+	exp1 = Experiment(population_size=100, generations=100, model=n1relu, fitness_function=no_points_for_frames, selection_function=roulette_wheel_select)
+	exp1.start()
+	
+	'''
+	# device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	
 	### Create population ###
 	agents = []
@@ -206,3 +280,5 @@ if __name__ == '__main__':
 			mutated_selected_agents[i].mutate()
 		
 		agents = selected_agents + mutated_selected_agents
+		
+	'''
